@@ -1,0 +1,228 @@
+---
+title: "Chapter 1 - Random Variables"
+author: "NC"
+date: "2023-02-23"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+
+### **Introduction**
+
+```{r}
+dat = read.csv("femaleMiceWeights.csv")
+head(dat)
+View(dat)
+```
+
+```{r}
+library(dplyr)
+
+control = filter(dat, Diet == "chow") %>% select(Bodyweight) %>% unlist
+treatment = filter(dat, Diet == "hf") %>% select(Bodyweight) %>% unlist
+
+mean(treatment)
+mean(control)
+
+obsdiff = mean(treatment)-mean(control)
+print(obsdiff)
+```
+These averages are in reality **random variables**, as they can take many values every time we repeat the experiment.
+
+### **Random Variables**
+
+```{r}
+library(downloader)
+
+url <- "https://raw.githubusercontent.com/genomicsclass/dagdata/master/inst/extdata/femaleControlsPopulation.csv"
+filename <- "femaleControlsPopulation.csv"
+
+if (!file.exists(filename)) download(url, destfile = filename) #downloading neede file if it is not there in our working directory
+
+population <- read.csv(filename)
+
+population <- unlist(population) # turn it into a numeric
+```
+
+
+See the random means
+```{r}
+sample(population,12) %>% mean
+sample(population,12) %>% mean
+sample(population,12) %>% mean
+```
+### **The Null Hypothesis**
+
+```{r}
+n = 10000
+null = vector("numeric", n)
+
+for (i in 1:n) {
+  control = sample(population, 12)
+  treatment = sample(population, 12)
+  null[i] = mean(treatment) - mean(control)
+}
+```
+
+```{r}
+hist(null)
+```
+
+
+Values in `null` form the **null distribution**
+
+
+How many / what percent of the null distribution values are greater than the difference we observed between actual treatment and control groups?
+
+```{r}
+
+mean(null >= obsdiff)
+
+```
+In other words, what is the probability that there would be a _greater (or equal) difference_ if the treatment had no effect? This is the **p-value**!
+
+
+
+### **Distributions**
+
+_Distribution_ could be described as a compact description of many numbers.
+
+Say we have hights of 1078 fathers:
+
+```{r}
+library(UsingR)
+x <- father.son$fheight
+
+
+round(sample(x, 10), 1) #see what some of the numbers look like
+```
+Not an efficient way. How to have a more clear idea of what all the numbers look like?
+
+We can **_define_** and **_visualize a distribution_**.
+
+
+#### **Cumulative distribution function (CDF)**
+
+$F(a) ≡ Pr(x \le a)$  
+
+Percent of values of the data set that are below each $a$.
+
+CDF - theoretical
+ECDF - empirical CDF, if derived from empirical data
+
+How to see it in action: by plotting.
+
+```{r}
+
+smallest = floor(min(x))
+largest = ceiling(max(x))
+
+values = seq(smallest, largest, len = 300) #these are the a-s
+
+heightecdf = ecdf(x)
+percents = heightecdf(values)
+
+plot(values, percents, 
+     type = "l",
+     xlab = "a (height in inches)",
+     ylab = "Pr(x <= a)"
+     )
+
+```
+
+
+
+#### **Histograms**
+
+Percent/number of values between intervals / specified values (a/b).
+
+$Pr(a \le x \le b) = F(b)-F(a)$
+
+
+_* $F(a)$ and $F(b)$ are the CDFs_, simpler - percent under b minus percent under a, gives the bar
+
+
+```{r}
+hist(x)
+```
+
+### **Probability Distributions**
+
+
+Say $X$ is a random height picked from our data
+
+$Pr(a \le X \le b) = F(b)-F(a)$
+
+**_Probability_** of X falling between a and b values (instead of _proportion_)
+
+
+
+```{r}
+n <- 100
+library(rafalib)
+nullplot(-5,5,1,30, xlab="Observed differences (grams)", ylab="Frequency")
+totals <- vector("numeric",11)
+for (i in 1:n) {
+  control <- sample(population,12)
+  treatment <- sample(population,12)
+  nulldiff <- mean(treatment) - mean(control)
+  j <- pmax(pmin(round(nulldiff)+6,11),1)
+  totals[j] <- totals[j]+1
+  text(j-6,totals[j],pch=15,round(nulldiff,1))
+  #if(i < 15) Sys.sleep(1) ##You can add this line to see values appear slowly
+  }
+```
+
+
+
+
+```{r}
+hist(null, freq = TRUE)
+abline(v=obsdiff, col = "red", lwd = 1.5)
+
+```
+
+
+While in this case the probability / proportion was computed on data, mathematics (i think statistics) gives formulas that can help compute the probability without having all the data, e. g. **the normal distribution approximation**
+
+### **Normal Distribution**
+
+
+Normal distribution is when values are distributed following a certain pattern (the bell curve), which is described in the normal distribution formula.
+See: http://genomicsclass.github.io/book/pages/random_variables.html
+
+Knowing this pattern (normal distribution general pattern), and assuming our data (_population_) is normally distributed we can calculate what proportion of the values is falling below any `x`. This can be computed using `pnorm` function, by passing the population data, its mean and standard deviation to it as arguments.
+
+```{r}
+pnorm(obsdiff, mean(null), sd(null))
+```
+Or the values above it, e. g. the proportion of values greater than our `obsdiff` in null distribution
+
+```{r}
+1- pnorm(obsdiff, mean(null), sd(null))
+```
+
+
+#### **Summary**
+
+We computed the _p-value_ for the mice experiment using all the population of control mice and repeating an experiment 10000 times in order to obtain the null distribution. This is not convenient in real world. Actually it is the **statistical inference** - a mathematical theory - which permits to compute the p-value based only on the 24 mice used.
+
+
+```{r}
+set.seed(1)
+```
+
+
+### TODO
+
+Create a GitHub repository and place all the notes there
+
+
+2. https://resources.github.com/github-and-rstudio/
+
+
+
+
